@@ -1,0 +1,76 @@
+{
+  "description": "双节保障演练：住宿到店无房、餐饮高风险品类、纯玩小团停发同时发生。名称和编号仅用于说明字段关系，不对应现实中的个人、企业或业务记录。",
+  "guarantee_versions": [
+    {
+      "version_id": "gv-2026-09",
+      "effective_from": "2026-09-01T00:00:00+08:00",
+      "cancel_scope": { "free_cancel_until": "2026-09-29T18:00:00+08:00" },
+      "compensation": {
+        "capacity_breach": { "rate": 1.3 },
+        "route_suspended": { "rate": 1.0 },
+        "high_risk_category": { "rate": 1.0 },
+        "rule_changed": { "rate": 1.0 }
+      }
+    },
+    {
+      "version_id": "gv-2026-10",
+      "effective_from": "2026-09-25T00:00:00+08:00",
+      "cancel_scope": { "free_cancel_until": "2026-09-27T18:00:00+08:00" },
+      "compensation": {
+        "capacity_breach": { "rate": 1.1 },
+        "route_suspended": { "rate": 1.0 },
+        "high_risk_category": { "rate": 1.0 },
+        "rule_changed": { "rate": 1.0 }
+      }
+    }
+  ],
+  "products": [
+    {
+      "product_id": "hotel-01",
+      "merchant_id": "m-hotel",
+      "type": "住宿",
+      "category": "酒店",
+      "rule": { "valid_until": "2026-10-08", "note": "到店核销" }
+    },
+    {
+      "product_id": "dining-01",
+      "merchant_id": "m-food",
+      "type": "餐饮",
+      "category": "生冷海鲜",
+      "rule": { "valid_until": "2026-10-08", "note": "双人餐券" }
+    },
+    {
+      "product_id": "tour-01",
+      "merchant_id": "m-tour",
+      "type": "旅行",
+      "category": "纯玩小团",
+      "rule": { "valid_until": "2026-10-08", "note": "十人小团" }
+    }
+  ],
+  "contacts": [
+    { "type": "contact_preference_set", "consumer_id": "c-1", "channel": "phone", "allow_hours": "09:00-21:00" },
+    { "type": "contact_preference_set", "consumer_id": "c-2", "channel": "sms" },
+    { "type": "contact_preference_set", "consumer_id": "c-3", "channel": "app" }
+  ],
+  "events": [
+    { "type": "capacity_declared", "event_id": "evt-cap-hotel-1", "merchant_id": "m-hotel", "product_id": "hotel-01", "use_date": "2026-10-01", "total_slots": 1, "declared_at": "2026-09-15T10:00:00+08:00" },
+    { "type": "capacity_declared", "event_id": "evt-cap-dining-1", "merchant_id": "m-food", "product_id": "dining-01", "use_date": "2026-10-01", "total_slots": 10, "declared_at": "2026-09-15T10:00:00+08:00" },
+    { "type": "capacity_declared", "event_id": "evt-cap-tour-1", "merchant_id": "m-tour", "product_id": "tour-01", "use_date": "2026-10-02", "total_slots": 2, "declared_at": "2026-09-15T10:00:00+08:00" },
+    { "type": "order_placed", "order_id": "o-hotel-1", "product_id": "hotel-01", "consumer_id": "c-1", "use_date": "2026-10-01", "slots": 1, "amount": 1000, "ordered_at": "2026-09-20T12:00:00+08:00" },
+    { "type": "order_placed", "order_id": "o-hotel-1", "product_id": "hotel-01", "consumer_id": "c-1", "use_date": "2026-10-01", "slots": 1, "amount": 1000, "ordered_at": "2026-09-20T12:00:00+08:00" },
+    { "type": "order_placed", "order_id": "o-hotel-2", "product_id": "hotel-01", "consumer_id": "c-2", "use_date": "2026-10-01", "slots": 1, "amount": 1000, "ordered_at": "2026-09-20T12:05:00+08:00" },
+    { "type": "order_placed", "order_id": "o-dining-1", "product_id": "dining-01", "consumer_id": "c-2", "use_date": "2026-10-01", "slots": 2, "amount": 400, "ordered_at": "2026-09-21T09:00:00+08:00" },
+    { "type": "order_placed", "order_id": "o-tour-1", "product_id": "tour-01", "consumer_id": "c-3", "use_date": "2026-10-02", "slots": 2, "amount": 600, "ordered_at": "2026-09-21T09:30:00+08:00" },
+    { "type": "capacity_declared", "event_id": "evt-cap-hotel-cut", "merchant_id": "m-hotel", "product_id": "hotel-01", "use_date": "2026-10-01", "total_slots": 0, "declared_at": "2026-09-27T08:00:00+08:00" },
+    { "type": "capacity_declared", "event_id": "evt-cap-hotel-cut", "merchant_id": "m-hotel", "product_id": "hotel-01", "use_date": "2026-10-01", "total_slots": 0, "declared_at": "2026-09-27T08:00:00+08:00" },
+    { "type": "inspection_concluded", "inspection_id": "insp-001", "merchant_id": "m-food", "category": "生冷海鲜", "level": "high", "concluded_at": "2026-09-27T15:00:00+08:00" },
+    { "type": "product_rule_changed", "product_id": "dining-01", "rule": { "valid_until": "2026-10-08", "excluded_dates": ["2026-10-01"], "note": "商户临时排除国庆当日" }, "updated_at": "2026-09-27T16:00:00+08:00" },
+    { "type": "route_suspended", "event_id": "evt-tour-stop", "product_id": "tour-01", "use_date": "2026-10-02", "decided_at": "2026-09-28T10:00:00+08:00", "reason": "车队停运" },
+    { "type": "redemption_recorded", "redemption_id": "rd-001", "order_id": "o-dining-1", "quantity": 1, "redeemed_at": "2026-10-01T12:00:00+08:00" },
+    { "type": "redemption_recorded", "redemption_id": "rd-001", "order_id": "o-dining-1", "quantity": 1, "redeemed_at": "2026-10-01T12:00:00+08:00" },
+    { "type": "compensation_requested", "order_id": "o-hotel-1", "reason": "capacity_breach", "issued_at": "2026-09-28T11:00:00+08:00" },
+    { "type": "compensation_requested", "order_id": "o-hotel-1", "reason": "capacity_breach", "issued_at": "2026-09-28T11:00:01+08:00" },
+    { "type": "order_cancelled", "order_id": "o-tour-1", "at": "2026-09-28T12:00:00+08:00" },
+    { "type": "order_cancelled", "order_id": "o-hotel-1", "at": "2026-09-30T10:00:00+08:00" }
+  ]
+}

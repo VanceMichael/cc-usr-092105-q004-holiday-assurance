@@ -4,13 +4,14 @@
 
 ## 资料范围
 
-`contracts/domain.schema.json` 约束交换资料的基本结构，`fixtures/domain.json` 提供一组不含真实个人信息的业务样例，`docs/domain.md` 说明领域对象与必须遵守的关系。读取模块只负责验证这些公开资料，不包含完整业务流程。
+`contracts/domain.schema.json` 约束交换资料的基本结构，`contracts/intake.schema.json` 定义中台接收的商户能力、团购券规则、出行日期、核销记录、巡检结论与联系偏好等事件契约，`fixtures/domain.json` 提供一组不含真实个人信息的业务样例，`fixtures/intake-events.json` 给出住宿到店无房、餐饮高风险品类与纯玩小团停发同时发生的演练序列，`docs/domain.md` 说明领域对象与必须遵守的关系。`src/domain.js` 只负责验证公开资料；`src/assurance.js` 是保障中台核心，负责冻结保障版本、防控超售、履约前外呼与客服追溯。
 
 当前资料确认了以下事实：
 
 - 双节前团购、酒店和景点需求显著增长
 - 平台对高风险住宿订单提前外呼
 - 住宿保障、食品巡检和取消赔付采用不同规则
+- 中台在流量突增下保证重复回调幂等、同一名额不并发超占、补偿只发一次
 
 ## 校验方式
 

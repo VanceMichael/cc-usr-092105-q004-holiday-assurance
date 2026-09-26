@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "节日保障中台接收契约",
+  "description": "中台接收的六类资料与两类管控事件。所有时间均为 ISO 8601 字符串；带 event_id / redemption_id / inspection_id 的回调按该键幂等，重复投递不得重复落账。",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/capacity_declared" },
+    { "$ref": "#/$defs/order_placed" },
+    { "$ref": "#/$defs/redemption_recorded" },
+    { "$ref": "#/$defs/inspection_concluded" },
+    { "$ref": "#/$defs/contact_preference_set" },
+    { "$ref": "#/$defs/product_rule_changed" },
+    { "$ref": "#/$defs/route_suspended" },
+    { "$ref": "#/$defs/compensation_requested" }
+  ],
+  "$defs": {
+    "capacity_declared": {
+      "title": "商户可售能力申报",
+      "type": "object",
+      "required": ["type", "event_id", "merchant_id", "product_id", "use_date", "total_slots", "declared_at"],
+      "properties": {
+        "type": { "const": "capacity_declared" },
+        "event_id": { "type": "string", "minLength": 1, "description": "幂等键，重复回调不得重复扣减" },
+        "merchant_id": { "type": "string", "minLength": 1 },
+        "product_id": { "type": "string", "minLength": 1 },
+        "use_date": { "type": "string", "format": "date", "description": "出行/使用日期" },
+        "total_slots": { "type": "integer", "minimum": 0, "description": "当日可售名额总量；改量不得覆盖已确认订单" },
+        "declared_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "order_placed": {
+      "title": "订单（下单即冻结保障版本与券规则快照）",
+      "type": "object",
+      "required": ["type", "order_id", "product_id", "consumer_id", "use_date", "slots", "ordered_at"],
+      "properties": {
+        "type": { "const": "order_placed" },
+        "order_id": { "type": "string", "minLength": 1, "description": "幂等键" },
+        "product_id": { "type": "string", "minLength": 1 },
+        "consumer_id": { "type": "string", "minLength": 1 },
+        "use_date": { "type": "string", "format": "date" },
+        "slots": { "type": "integer", "minimum": 1 },
+        "amount": { "type": "number", "minimum": 0 },
+        "ordered_at": { "type": "string", "format": "date-time", "description": "决定冻结哪个保障版本" }
+      },
+      "additionalProperties": false
+    },
+    "redemption_recorded": {
+      "title": "核销记录（允许部分核销，剩余承诺继续有效）",
+      "type": "object",
+      "required": ["type", "redemption_id", "order_id", "quantity", "redeemed_at"],
+      "properties": {
+        "type": { "const": "redemption_recorded" },
+        "redemption_id": { "type": "string", "minLength": 1, "description": "幂等键" },
+        "order_id": { "type": "string", "minLength": 1 },
+        "quantity": { "type": "integer", "minimum": 1 },
+        "redeemed_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "inspection_concluded": {
+      "title": "巡检结论（高风险只作用于同商户同品类，不向无关商户扩大披露）",
+      "type": "object",
+      "required": ["type", "inspection_id", "merchant_id", "category", "level", "concluded_at"],
+      "properties": {
+        "type": { "const": "inspection_concluded" },
+        "inspection_id": { "type": "string", "minLength": 1, "description": "幂等键" },
+        "merchant_id": { "type": "string", "minLength": 1 },
+        "category": { "type": "string", "minLength": 1 },
+        "level": { "enum": ["low", "medium", "high"] },
+        "concluded_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "contact_preference_set": {
+      "title": "消费者联系偏好",
+      "type": "object",
+      "required": ["type", "consumer_id", "channel"],
+      "properties": {
+        "type": { "const": "contact_preference_set" },
+        "consumer_id": { "type": "string", "minLength": 1 },
+        "channel": { "enum": ["phone", "sms", "app"] },
+        "allow_hours": { "type": "string", "description": "可联系时段，如 09:00-21:00" }
+      },
+      "additionalProperties": false
+    },
+    "product_rule_changed": {
+      "title": "商户改团购券规则（只对新订单生效；收窄原承诺须触发外呼）",
+      "type": "object",
+      "required": ["type", "product_id", "rule", "updated_at"],
+      "properties": {
+        "type": { "const": "product_rule_changed" },
+        "product_id": { "type": "string", "minLength": 1 },
+        "rule": {
+          "type": "object",
+          "properties": {
+            "valid_until": { "type": "string", "format": "date" },
+            "excluded_dates": { "type": "array", "items": { "type": "string", "format": "date" } },
+            "note": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "route_suspended": {
+      "title": "线路停发（标记风险并外呼，不取消已确认订单）",
+      "type": "object",
+      "required": ["type", "event_id", "product_id", "use_date", "decided_at"],
+      "properties": {
+        "type": { "const": "route_suspended" },
+        "event_id": { "type": "string", "minLength": 1, "description": "幂等键" },
+        "product_id": { "type": "string", "minLength": 1 },
+        "use_date": { "type": "string", "format": "date" },
+        "decided_at": { "type": "string", "format": "date-time" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "compensation_requested": {
+      "title": "补偿申请（同一订单同一原因只发放一次，标准按冻结版本）",
+      "type": "object",
+      "required": ["type", "order_id", "reason", "issued_at"],
+      "properties": {
+        "type": { "const": "compensation_requested" },
+        "order_id": { "type": "string", "minLength": 1 },
+        "reason": { "enum": ["capacity_breach", "route_suspended", "high_risk_category", "rule_changed"] },
+        "issued_at": { "type": "string", "format": "date-time" },
+        "amount": { "type": "number", "minimum": 0, "description": "缺省时按冻结版本的赔付标准计算" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
