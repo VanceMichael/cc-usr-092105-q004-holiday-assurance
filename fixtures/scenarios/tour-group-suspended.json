@@ -1,0 +1,123 @@
+{
+  "id": "tour-group-suspended",
+  "title": "纯玩小团名额占满后线路停发：已承诺订单全部进入预防名单，取消按冻结版本赔付，新单被拒",
+  "category": "tour",
+  "description": "6 人纯玩小团双节 10 月 3 日成团，6 单各占 1 个名额。第 7 单因名额不足被拒；随后线路停发，停发只拒绝新单，6 个已承诺订单全部进入人工/外呼确认而不是被悄悄取消。接受改期的订单继续履约；取消的订单按 v1 冻结版本全额退款并按停发标准赔付，商户之后改规则不影响赔付依据。",
+  "steps": [
+    {
+      "op": "publishAssuranceVersion",
+      "input": {
+        "productId": "TOUR-GRP-003",
+        "effectiveFrom": "2026-09-01T00:00:00+08:00",
+        "cancellationTiers": [
+          { "beforeHours": 48, "refundRatio": 1 },
+          { "beforeHours": 24, "refundRatio": 0.7 },
+          { "beforeHours": 0, "refundRatio": 0.3 }
+        ],
+        "compensation": {
+          "standards": {
+            "oversold": { "type": "ratio", "value": 0.3, "rule": "小团超售按30%赔付" },
+            "route_suspended": { "type": "ratio", "value": 0.5, "rule": "线路停发按50%赔付" },
+            "default": { "type": "ratio", "value": 0.3, "rule": "商户违约按30%赔付" }
+          }
+        },
+        "rulesText": "6 人纯玩小团，成团后确认出行，48 小时前可免费取消"
+      }
+    },
+    {
+      "op": "declareCapacity",
+      "input": { "productId": "TOUR-GRP-003", "date": "2026-10-03", "declared": 6, "callbackId": "cb-tour-declare-1", "reason": "成团名额首报" },
+      "expect": { "equal": { "breached": false, "affected": [] } }
+    },
+    { "op": "placeOrder", "input": { "orderId": "OD-TR-3001", "productId": "TOUR-GRP-003", "merchantId": "M-TOUR-03", "category": "tour", "travelDate": "2026-10-03", "units": 1, "amount": 1000, "contactPreference": { "channel": "phone" } }, "expect": { "status": "confirmed" } },
+    { "op": "placeOrder", "input": { "orderId": "OD-TR-3002", "productId": "TOUR-GRP-003", "merchantId": "M-TOUR-03", "category": "tour", "travelDate": "2026-10-03", "units": 1, "amount": 1000, "contactPreference": { "channel": "phone" } }, "expect": { "status": "confirmed" } },
+    { "op": "placeOrder", "input": { "orderId": "OD-TR-3003", "productId": "TOUR-GRP-003", "merchantId": "M-TOUR-03", "category": "tour", "travelDate": "2026-10-03", "units": 1, "amount": 1000, "contactPreference": { "channel": "sms" } }, "expect": { "status": "confirmed" } },
+    { "op": "placeOrder", "input": { "orderId": "OD-TR-3004", "productId": "TOUR-GRP-003", "merchantId": "M-TOUR-03", "category": "tour", "travelDate": "2026-10-03", "units": 1, "amount": 1000, "contactPreference": { "channel": "sms" } }, "expect": { "status": "confirmed" } },
+    { "op": "placeOrder", "input": { "orderId": "OD-TR-3005", "productId": "TOUR-GRP-003", "merchantId": "M-TOUR-03", "category": "tour", "travelDate": "2026-10-03", "units": 1, "amount": 1000, "contactPreference": { "channel": "app_push" } }, "expect": { "status": "confirmed" } },
+    { "op": "placeOrder", "input": { "orderId": "OD-TR-3006", "productId": "TOUR-GRP-003", "merchantId": "M-TOUR-03", "category": "tour", "travelDate": "2026-10-03", "units": 1, "amount": 1000, "contactPreference": { "channel": "app_push" } }, "expect": { "status": "confirmed" } },
+    {
+      "op": "placeOrder",
+      "input": { "orderId": "OD-TR-3007", "productId": "TOUR-GRP-003", "merchantId": "M-TOUR-03", "category": "tour", "travelDate": "2026-10-03", "units": 1, "amount": 1000, "contactPreference": { "channel": "phone" } },
+      "expect": { "throws": "SOLD_OUT" }
+    },
+    {
+      "op": "placeOrder",
+      "input": { "orderId": "OD-TR-3001", "productId": "TOUR-GRP-003", "merchantId": "M-TOUR-03", "category": "tour", "travelDate": "2026-10-03", "units": 1, "amount": 1000, "contactPreference": { "channel": "phone" } },
+      "expect": { "equal": { "order.status": "confirmed" } }
+    },
+    {
+      "op": "stopSelling",
+      "input": { "productId": "TOUR-GRP-003", "date": "2026-10-03", "callbackId": "cb-tour-stop-1", "reason": "道路管制线路停发" },
+      "expect": { "equal": { "stopped": true, "affected.length": 6 } }
+    },
+    {
+      "op": "stopSelling",
+      "input": { "productId": "TOUR-GRP-003", "date": "2026-10-03", "callbackId": "cb-tour-stop-1", "reason": "道路管制线路停发" },
+      "expect": { "equal": { "stopped": true, "affected.length": 6 } }
+    },
+    {
+      "op": "placeOrder",
+      "input": { "orderId": "OD-TR-3008", "productId": "TOUR-GRP-003", "merchantId": "M-TOUR-03", "category": "tour", "travelDate": "2026-10-03", "units": 1, "amount": 1000, "contactPreference": { "channel": "phone" } },
+      "expect": { "throws": "SOLD_OUT" }
+    },
+    { "op": "guard", "input": { "orderId": "OD-TR-3001" }, "expect": { "throws": "GUARD_BLOCKED" } },
+    {
+      "op": "completePreventiveForOrder",
+      "input": { "orderId": "OD-TR-3001", "outcome": "confirmed", "note": "消费者接受改期至 10 月 5 日同线路" },
+      "expect": { "equal": { "order.status": "confirmed" } }
+    },
+    {
+      "op": "markFulfilled",
+      "input": { "orderId": "OD-TR-3001" },
+      "expect": { "equal": { "status": "fulfilled" } }
+    },
+    {
+      "op": "completePreventiveForOrder",
+      "input": { "orderId": "OD-TR-3002", "outcome": "consumer_cancelled", "note": "线路停发，消费者取消" },
+      "expect": {
+        "equal": {
+          "order.status": "cancelled",
+          "refund.refundAmount": 1000,
+          "refund.refundRatio": 1,
+          "refund.versionId": "TOUR-GRP-003#v1",
+          "compensation.amount": 500,
+          "compensation.reason": "route_suspended"
+        }
+      }
+    },
+    {
+      "op": "cancel",
+      "input": { "orderId": "OD-TR-3002", "merchantFault": true, "reason": "线路停发" },
+      "expect": { "equal": { "order.status": "cancelled", "refund.refundAmount": 1000, "compensation.amount": 500, "replayed": true } }
+    },
+    {
+      "op": "merchantRuleChange",
+      "input": {
+        "productId": "TOUR-GRP-003",
+        "callbackId": "cb-tour-rule-1",
+        "note": "商户停发后试图把取消改为不退",
+        "version": {
+          "productId": "TOUR-GRP-003",
+          "effectiveFrom": "2026-10-02T00:00:00+08:00",
+          "cancellationTiers": [ { "beforeHours": 0, "refundRatio": 0 } ],
+          "rulesText": "新规：一律不退"
+        }
+      }
+    },
+    {
+      "op": "complaint",
+      "input": { "complaintId": "CMP-TR-01", "orderId": "OD-TR-3002" },
+      "expect": {
+        "equal": {
+          "declaredCapacity.initialDeclared": 6,
+          "originalPromise.versionId": "TOUR-GRP-003#v1",
+          "outcome.status": "cancelled",
+          "outcome.refund.versionId": "TOUR-GRP-003#v1",
+          "outcome.refund.refundAmount": 1000,
+          "outcome.compensations.0.amount": 500,
+          "promiseRevisions.0.type": "route_suspended"
+        }
+      }
+    }
+  ]
+}

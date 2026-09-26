@@ -1,0 +1,106 @@
+{
+  "id": "lodging-oversold",
+  "title": "酒店改量击穿承诺线，到店无房风险订单履约前外呼并按冻结版本赔付",
+  "category": "lodging",
+  "description": "双节 10 月 1 日，酒店首报 2 间房、两单各占 1 间；商户节前临时把可售下调到 1 间。最晚下单的订单被挑出、进入人工确认，履约闸口拦截；消费者在确认中取消，平台按下单时冻结版本全额退款并赔付，补偿只发一次。",
+  "steps": [
+    {
+      "op": "publishAssuranceVersion",
+      "input": {
+        "productId": "HTL-SEA-001",
+        "effectiveFrom": "2026-09-01T00:00:00+08:00",
+        "cancellationTiers": [
+          { "beforeHours": 72, "refundRatio": 1 },
+          { "beforeHours": 24, "refundRatio": 0.5 },
+          { "beforeHours": 0, "refundRatio": 0 }
+        ],
+        "compensation": {
+          "standards": {
+            "oversold": { "type": "ratio", "value": 0.3, "rule": "到店无房按订单金额30%赔付" },
+            "default": { "type": "ratio", "value": 0.3, "rule": "商户违约按30%赔付" }
+          }
+        },
+        "rulesText": "入住日14点后到店保留；72小时前可免费取消"
+      }
+    },
+    {
+      "op": "declareCapacity",
+      "input": { "productId": "HTL-SEA-001", "date": "2026-10-01", "declared": 2, "callbackId": "cb-htl-declare-1", "reason": "双节房量首报" }
+    },
+    {
+      "op": "placeOrder",
+      "input": { "orderId": "OD-HTL-1001", "productId": "HTL-SEA-001", "merchantId": "M-HTL-01", "category": "lodging", "travelDate": "2026-10-01", "units": 1, "amount": 500, "contactPreference": { "channel": "phone" } },
+      "expect": { "status": "confirmed" }
+    },
+    {
+      "op": "placeOrder",
+      "input": { "orderId": "OD-HTL-1002", "productId": "HTL-SEA-001", "merchantId": "M-HTL-01", "category": "lodging", "travelDate": "2026-10-01", "units": 1, "amount": 500, "contactPreference": { "channel": "sms" } },
+      "expect": { "status": "confirmed" }
+    },
+    {
+      "op": "placeOrder",
+      "input": { "orderId": "OD-HTL-1003", "productId": "HTL-SEA-001", "merchantId": "M-HTL-01", "category": "lodging", "travelDate": "2026-10-01", "units": 1, "amount": 500, "contactPreference": { "channel": "phone" } },
+      "expect": { "throws": "SOLD_OUT" }
+    },
+    {
+      "op": "placeOrder",
+      "input": { "orderId": "OD-HTL-1001", "productId": "HTL-SEA-001", "merchantId": "M-HTL-01", "category": "lodging", "travelDate": "2026-10-01", "units": 1, "amount": 500, "contactPreference": { "channel": "phone" } },
+      "expect": { "equal": { "order.status": "confirmed" } },
+      "capture": { "replayedOrder": "order.orderId" }
+    },
+    {
+      "op": "declareCapacity",
+      "input": { "productId": "HTL-SEA-001", "date": "2026-10-01", "declared": 1, "callbackId": "cb-htl-reduce-1", "reason": "酒店超售改量" },
+      "expect": { "equal": { "affected.0.orderId": "OD-HTL-1002", "breached": true } },
+      "capture": { "affectedOrderId": "affected.0.orderId" }
+    },
+    {
+      "op": "guard",
+      "input": { "orderId": "OD-HTL-1002" },
+      "expect": { "throws": "GUARD_BLOCKED" }
+    },
+    {
+      "op": "markFulfilled",
+      "input": { "orderId": "OD-HTL-1002" },
+      "expect": { "throws": "GUARD_BLOCKED" }
+    },
+    {
+      "op": "completePreventiveForOrder",
+      "input": { "orderId": "OD-HTL-1002", "outcome": "consumer_cancelled", "note": "酒店确认无房，消费者取消" },
+      "expect": {
+        "equal": {
+          "order.status": "cancelled",
+          "refund.refundAmount": 500,
+          "refund.refundRatio": 1,
+          "refund.versionId": "HTL-SEA-001#v1",
+          "compensation.amount": 150
+        }
+      }
+    },
+    {
+      "op": "cancel",
+      "input": { "orderId": "OD-HTL-1002", "merchantFault": true, "reason": "重复发起取消" },
+      "expect": {
+        "equal": {
+          "order.status": "cancelled",
+          "refund.refundAmount": 500,
+          "compensation.amount": 150,
+          "replayed": true
+        }
+      }
+    },
+    {
+      "op": "complaint",
+      "input": { "complaintId": "CMP-HTL-01", "orderId": "OD-HTL-1002" },
+      "expect": {
+        "equal": {
+          "declaredCapacity.initialDeclared": 2,
+          "declaredCapacity.currentDeclared": 1,
+          "outcome.status": "cancelled",
+          "outcome.refund.refundAmount": 500,
+          "originalPromise.versionId": "HTL-SEA-001#v1"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "id": "dining-high-risk-category",
+  "title": "餐饮高风险品类团购：部分核销不覆盖原权益，巡检不合格挂起、复查通过恢复",
+  "category": "dining",
+  "description": "双节 4 人餐团购（含生食冷荤高风险品类）。消费者先核销 1 份（部分核销，原权益不变）；门店随后被巡检判为不合格，未核销部分订单进入人工确认并被核销闸口拦截；门店整改复查通过后订单恢复，剩余份数正常核销。补偿若已发只发一次，巡检结论只对涉事商户可见。",
+  "steps": [
+    {
+      "op": "publishAssuranceVersion",
+      "input": {
+        "productId": "RST-PKG-002",
+        "effectiveFrom": "2026-09-01T00:00:00+08:00",
+        "cancellationTiers": [
+          { "beforeHours": 24, "refundRatio": 1 },
+          { "beforeHours": 0, "refundRatio": 0 }
+        ],
+        "compensation": {
+          "standards": {
+            "inspection": { "type": "ratio", "value": 1, "rule": "高风险品类巡检不合格，未消费部分全额退" },
+            "default": { "type": "ratio", "value": 0.5, "rule": "餐饮违约按50%赔付" }
+          }
+        },
+        "rulesText": "团购券 4 份，可分次核销，节假日通用"
+      }
+    },
+    {
+      "op": "declareCapacity",
+      "input": { "productId": "RST-PKG-002", "date": "2026-10-02", "declared": 50, "callbackId": "cb-rst-declare-1", "reason": "双节接待能力首报" }
+    },
+    {
+      "op": "placeOrder",
+      "input": {
+        "orderId": "OD-RST-2001", "productId": "RST-PKG-002", "merchantId": "M-RST-02", "category": "dining",
+        "travelDate": "2026-10-02", "units": 4, "amount": 800, "highRiskCategory": "生食",
+        "voucherId": "VCH-2001", "contactPreference": { "channel": "app_push" }
+      },
+      "expect": {
+        "equal": {
+          "order.status": "confirmed",
+          "risk.level": "medium",
+          "outreachTask": null
+        }
+      }
+    },
+    {
+      "op": "redeemVoucher",
+      "input": { "orderId": "OD-RST-2001", "idempotencyKey": "rdm-2001-a", "units": 1, "voucherCode": "VCH-2001", "storeId": "S-02" },
+      "expect": {
+        "equal": {
+          "record.kind": "partial",
+          "verification.state": "partial",
+          "verification.remaining": 3,
+          "order.status": "partially_redeemed"
+        }
+      }
+    },
+    {
+      "op": "redeemVoucher",
+      "input": { "orderId": "OD-RST-2001", "idempotencyKey": "rdm-2001-a", "units": 1, "voucherCode": "VCH-2001", "storeId": "S-02" },
+      "expect": {
+        "equal": {
+          "replayed": true,
+          "verification.redeemed": 1
+        }
+      }
+    },
+    {
+      "op": "redeemVoucher",
+      "input": { "orderId": "OD-RST-2001", "idempotencyKey": "rdm-2001-over", "units": 4, "voucherCode": "VCH-2001", "storeId": "S-02" },
+      "expect": { "throws": "ILLEGAL_OVERRIDE" }
+    },
+    {
+      "op": "recordInspection",
+      "input": { "inspectionId": "INS-2026-0815", "merchantId": "M-RST-02", "category": "food", "conclusion": "fail", "hazards": ["生食专间温度超标", "冷荤留样缺失"], "at": "2026-10-01T10:00:00+08:00" },
+      "expect": { "equal": { "conclusion": "fail" } }
+    },
+    {
+      "op": "redeemVoucher",
+      "input": { "orderId": "OD-RST-2001", "idempotencyKey": "rdm-2001-b", "units": 1, "voucherCode": "VCH-2001", "storeId": "S-02" },
+      "expect": { "throws": "GUARD_BLOCKED" }
+    },
+    {
+      "op": "completePreventiveForOrder",
+      "input": { "orderId": "OD-RST-2001", "outcome": "unreachable", "note": "暂未联系上消费者" },
+      "expect": { "equal": { "order.status": "risk_held" } }
+    },
+    {
+      "op": "recordInspection",
+      "input": { "inspectionId": "INS-2026-0816", "merchantId": "M-RST-02", "category": "food", "conclusion": "pass", "hazards": [], "resolves": ["INS-2026-0815"], "at": "2026-10-01T16:00:00+08:00" },
+      "expect": { "equal": { "conclusion": "pass" } }
+    },
+    {
+      "op": "guard",
+      "input": { "orderId": "OD-RST-2001" },
+      "expect": { "equal": { "allowed": true } }
+    },
+    {
+      "op": "redeemVoucher",
+      "input": { "orderId": "OD-RST-2001", "idempotencyKey": "rdm-2001-c", "units": 3, "voucherCode": "VCH-2001", "storeId": "S-02" },
+      "expect": {
+        "equal": {
+          "record.kind": "full",
+          "verification.state": "full",
+          "order.status": "fulfilled"
+        }
+      }
+    },
+    {
+      "op": "complaint",
+      "input": { "complaintId": "CMP-RST-01", "orderId": "OD-RST-2001" },
+      "expect": {
+        "equal": {
+          "verification.total": 4,
+          "verification.redeemed": 4,
+          "outcome.status": "fulfilled",
+          "outcome.refund": null,
+          "inspections.1.resolves.0": "INS-2026-0815"
+        }
+      }
+    }
+  ]
+}

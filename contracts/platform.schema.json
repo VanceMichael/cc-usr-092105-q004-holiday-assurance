@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://platform.example/contracts/platform.schema.json",
+  "title": "节日保障中台交换契约",
+  "description": "中台与商户/履约/客服之间交换的命令与回调。所有写操作必须携带幂等键；取消范围与赔付标准以订单内冻结的保障版本为准。",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/AssuranceVersionPublish" },
+    { "$ref": "#/$defs/CapacityDeclaration" },
+    { "$ref": "#/$defs/SalesStop" },
+    { "$ref": "#/$defs/MerchantRuleChange" },
+    { "$ref": "#/$defs/InspectionRecord" },
+    { "$ref": "#/$defs/OrderPlacement" },
+    { "$ref": "#/$defs/VoucherRedemption" },
+    { "$ref": "#/$defs/FulfillmentFailure" },
+    { "$ref": "#/$defs/PreventiveCompletion" },
+    { "$ref": "#/$defs/FulfillmentMark" },
+    { "$ref": "#/$defs/CancelRequest" }
+  ],
+  "$defs": {
+    "CallbackBase": {
+      "type": "object",
+      "required": ["productId"],
+      "properties": {
+        "callbackId": { "type": "string", "minLength": 1, "description": "调用方幂等键；同键不同载荷判冲突" },
+        "at": { "type": "string", "format": "date-time" },
+        "source": { "type": "string" },
+        "reason": { "type": "string" }
+      }
+    },
+    "CancellationTier": {
+      "type": "object",
+      "required": ["beforeHours", "refundRatio"],
+      "properties": {
+        "beforeHours": { "type": "number", "minimum": 0, "description": "距履约多少小时之前适用" },
+        "refundRatio": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "CompensationStandard": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["ratio", "fixed"] },
+        "value": { "type": "number", "minimum": 0 },
+        "amount": { "type": "number", "minimum": 0 },
+        "rule": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "VersionDefinition": {
+      "type": "object",
+      "required": ["productId", "cancellationTiers"],
+      "properties": {
+        "productId": { "type": "string", "minLength": 1 },
+        "effectiveFrom": { "type": "string", "format": "date-time" },
+        "cancellationTiers": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/CancellationTier" } },
+        "compensation": {
+          "type": "object",
+          "properties": { "standards": { "type": "object", "additionalProperties": { "$ref": "#/$defs/CompensationStandard" } } },
+          "additionalProperties": true
+        },
+        "rulesText": { "type": "string" },
+        "source": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "AssuranceVersionPublish": {
+      "type": "object",
+      "required": ["op", "productId", "cancellationTiers"],
+      "properties": {
+        "op": { "const": "publishAssuranceVersion" },
+        "productId": { "type": "string", "minLength": 1 },
+        "effectiveFrom": { "type": "string", "format": "date-time" },
+        "cancellationTiers": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/CancellationTier" } },
+        "compensation": {
+          "type": "object",
+          "properties": { "standards": { "type": "object", "additionalProperties": { "$ref": "#/$defs/CompensationStandard" } } },
+          "additionalProperties": true
+        },
+        "rulesText": { "type": "string" },
+        "source": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "CapacityDeclaration": {
+      "type": "object",
+      "required": ["op", "productId", "date", "declared"],
+      "properties": {
+        "op": { "const": "declareCapacity" },
+        "productId": { "type": "string" },
+        "date": { "type": "string", "format": "date", "description": "出行日期" },
+        "declared": { "type": "integer", "minimum": 0, "description": "商户申报的可售能力（房量/名额/位量）" },
+        "callbackId": { "type": "string" },
+        "at": { "type": "string", "format": "date-time" },
+        "reason": { "type": "string" },
+        "source": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "SalesStop": {
+      "type": "object",
+      "required": ["op", "productId", "date"],
+      "properties": {
+        "op": { "const": "stopSelling" },
+        "productId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "callbackId": { "type": "string" },
+        "at": { "type": "string", "format": "date-time" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "MerchantRuleChange": {
+      "type": "object",
+      "required": ["op", "productId", "version"],
+      "properties": {
+        "op": { "const": "merchantRuleChange" },
+        "productId": { "type": "string" },
+        "callbackId": { "type": "string" },
+        "note": { "type": "string" },
+        "version": { "$ref": "#/$defs/VersionDefinition" }
+      },
+      "additionalProperties": false
+    },
+    "InspectionRecord": {
+      "type": "object",
+      "required": ["op", "inspectionId", "merchantId", "conclusion"],
+      "properties": {
+        "op": { "const": "recordInspection" },
+        "inspectionId": { "type": "string" },
+        "merchantId": { "type": "string" },
+        "category": { "enum": ["food", "lodging", "tour"] },
+        "conclusion": { "enum": ["pass", "rectify", "fail"] },
+        "hazards": { "type": "array", "items": { "type": "string" } },
+        "resolves": { "type": "array", "items": { "type": "string" }, "description": "复查通过时消除的历史巡检结论 id" },
+        "at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "OrderPlacement": {
+      "type": "object",
+      "required": ["op", "orderId", "productId", "merchantId", "category", "travelDate", "amount"],
+      "properties": {
+        "op": { "const": "placeOrder" },
+        "orderId": { "type": "string" },
+        "productId": { "type": "string" },
+        "merchantId": { "type": "string" },
+        "category": { "enum": ["lodging", "dining", "tour"] },
+        "travelDate": { "type": "string", "format": "date" },
+        "units": { "type": "integer", "minimum": 1 },
+        "amount": { "type": "number", "minimum": 0 },
+        "highRiskCategory": { "type": ["string", "null"] },
+        "voucherId": { "type": ["string", "null"] },
+        "contactPreference": {
+          "type": "object",
+          "required": ["channel"],
+          "properties": { "channel": { "enum": ["phone", "sms", "app_push", "none"] } },
+          "additionalProperties": false
+        },
+        "callbackId": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "VoucherRedemption": {
+      "type": "object",
+      "required": ["op", "orderId", "idempotencyKey"],
+      "properties": {
+        "op": { "const": "redeemVoucher" },
+        "orderId": { "type": "string" },
+        "idempotencyKey": { "type": "string", "description": "核销幂等键，重复回调只认一次" },
+        "units": { "type": "integer", "minimum": 1 },
+        "voucherCode": { "type": "string" },
+        "storeId": { "type": "string" },
+        "at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "FulfillmentFailure": {
+      "type": "object",
+      "required": ["op", "orderId", "reason"],
+      "properties": {
+        "op": { "const": "reportFulfillmentFailure" },
+        "orderId": { "type": "string" },
+        "category": { "enum": ["lodging", "dining", "tour"] },
+        "reason": { "type": "string" },
+        "callbackId": { "type": "string" },
+        "at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "CancelRequest": {
+      "type": "object",
+      "required": ["op", "orderId"],
+      "properties": {
+        "op": { "const": "cancel" },
+        "orderId": { "type": "string" },
+        "at": { "type": "string", "format": "date-time" },
+        "initiator": { "enum": ["consumer", "merchant", "platform"] },
+        "merchantFault": { "type": "boolean" },
+        "reason": { "type": "string" },
+        "callbackId": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "PreventiveCompletion": {
+      "type": "object",
+      "required": ["op", "orderId", "outcome"],
+      "properties": {
+        "op": { "const": "completePreventiveForOrder" },
+        "orderId": { "type": "string" },
+        "outcome": { "enum": ["confirmed", "consumer_cancelled", "merchant_rectified", "unreachable"] },
+        "note": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "FulfillmentMark": {
+      "type": "object",
+      "required": ["op", "orderId"],
+      "properties": {
+        "op": { "const": "markFulfilled" },
+        "orderId": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
